@@ -1,0 +1,193 @@
+---
+title: "Obesity Exploration"
+author: "Kushal Kumar Dey"
+date: "Friday, December 05, 2014"
+output: word_document
+---
+
+In this report, we perform an exploratory analysis of Obesity and Abdominal Obesity with respect totwo genetic factors (namely the DGAT and the MC4R genes). Note that in the samples availabel, there were two levels of the MC4R gene (G/G and G/A) and the DGAT gene had three levels (TT, CT, CC). 
+
+```{r,eval=TRUE, echo=FALSE}
+Data=read.csv("D:/Type II diabetes/Obesity.csv");
+Data=Data[,-(15:16)];
+# colnames(Data)
+
+index=which(Data$gender==3);
+
+Data=Data[-index,];
+attach(Data)
+DGAT[which(DGAT=="CT")]="TC";
+
+mean_BMI_CC=mean(BMI[which(DGAT=="CC")]);  
+mean_BMI_TC=mean(BMI[which(DGAT=="TC")]);
+mean_BMI_TT=mean(BMI[which(DGAT=="TT")]);
+sd_BMI_CC=sd(BMI[which(DGAT=="CC")]);  
+sd_BMI_TC=sd(BMI[which(DGAT=="TC")]);
+sd_BMI_TT=sd(BMI[which(DGAT=="TT")]);
+Obesity_index=array(0,length(DGAT));
+Obesity_index[which(BMI>30)]=1;
+DGAT=factor(DGAT);
+xtabs(~Obesity_index+DGAT);
+library(knitr)
+library(rmarkdown)
+library(pander)
+Table_DGAT=data.frame(rbind("TT",mean_BMI_TT,sd_BMI_TT),rbind("TC",mean_BMI_TC,sd_BMI_TC),rbind("CC",mean_BMI_CC,sd_BMI_CC)); colnames(Table_DGAT)=c("1","2","3");
+kable(t(Table_DGAT),digits=4,col.names=c("Levels","Mean BMI", "SD BMI"));
+pval_CC_TC= t.test(BMI[which(DGAT=="CC")],BMI[which(DGAT=="TC")])$p.val;
+pval_TT_TC= t.test(BMI[which(DGAT=="TT")],BMI[which(DGAT=="TC")])$p.val;
+pval_CC_TT= t.test(BMI[which(DGAT=="TT")],BMI[which(DGAT=="TC")])$p.val;
+
+
+
+
+```
+
+The values of the pairwise comparison t-test between CC/TC, TT/TC and CC/TT are given by `r pval_CC_TC `, `r pval_TT_TC ` and `r pval_CC_TT `. Also we perform a linear regression of BMI on the genetic effect of DGAT 
+
+```{r, eval=TRUE, echo=FALSE}
+L_DGAT=lm(BMI~DGAT); 
+kable(summary(L_DGAT)$coef, digits=4);
+```
+
+A GLM model of Obesity on DGAT and the output is shown as below
+
+
+```{r, eval=TRUE, echo=FALSE}
+#summary(L_DGAT);
+GL_DGAT=glm(Obesity_index~DGAT); 
+kable(summary(L_DGAT)$coef, digits=4);
+#summary(GL_DGAT);
+
+```
+
+
+Now we consider the MC4R gene with only two levels given in the sample represented by G/G and G/A. and we compute the summary statistics based on that
+
+```{r,eval=TRUE,echo=FALSE}
+mean_BMI_GG=mean(BMI[which(MC4R=="G/G")]);  
+mean_BMI_GA=mean(BMI[which(MC4R=="G/A")]);
+sd_BMI_GG=sd(BMI[which(MC4R=="G/G")]);  
+sd_BMI_GA=sd(BMI[which(MC4R=="G/A")]);
+xtabs(~Obesity_index+MC4R);
+Table_MC4R=data.frame(rbind("G/G",mean_BMI_GG,sd_BMI_GG),rbind("G/A",mean_BMI_GA,sd_BMI_GA)); colnames(Table_MC4R)=c("1","2");
+kable(t(Table_MC4R),digits=4,col.names=c("Levels","Mean BMI", "SD BMI"));
+#library(abd);
+
+```
+
+We use a linear model fit of BMI against the different levels of the MC4R gene and fit obesity against the MC4R gene. We try to see how the genetic factor influences the BMI. The odds atio for the table is given by 11.05, which is pretty large and shows a great deal of dependence of obesity on the MC4R levels. We first present a linear model fitting BMI against the MC4R gene 
+
+```{r,eval=TRUE,echo=FALSE}
+pval_GG_GA= t.test(BMI[which(MC4R=="G/G")],BMI[which(MC4R=="G/A")])$p.val;
+L_MC4R=lm(BMI~MC4R); 
+kable(summary(L_MC4R)$coef, digits=4);
+```
+
+We also fit a generalized linear model fitting obesity against the different levels of the MC4R gene. 
+
+```{r, eval=TRUE, echo=FALSE}
+#summary(L_MC4R);
+GL_MC4R=glm(Obesity_index~MC4R); 
+kable(summary(GL_MC4R)$coef, digits=4);
+#summary(GL_MC4R);
+```
+
+Now we focus on the abdominal obesity, due to WHR and look at how this WHR depends on the levels of the DGAT and the MC4R genes.
+
+```{r, eval=TRUE, echo=FALSE}
+WHO_Ab_obese_indicator=array(0,length(WHR));
+
+WHO_Ab_obese_indicator[which(WHR>=0.9 & gender==1 | WHR>=0.8 & gender==2)]=1;
+mean_WHR_GG=mean(WHR[which(MC4R=="G/G")]);  
+mean_WHR_GA=mean(WHR[which(MC4R=="G/A")]);
+sd_WHR_GG=sd(WHR[which(MC4R=="G/G")]);  
+sd_WHR_GA=sd(WHR[which(MC4R=="G/A")]);
+xtabs(~WHO_Ab_obese_indicator+MC4R);
+Table_MC4R=data.frame(rbind("G/G",mean_WHR_GG,sd_WHR_GG),rbind("G/A",mean_WHR_GA,sd_WHR_GA)); colnames(Table_MC4R)=c("1","2");
+kable(t(Table_MC4R),digits=4,col.names=c("Levels","Mean BMI", "SD BMI"));
+```
+
+The odds ratio of the Abdominal Obesity against MC4R is 6.924. This again suggests that MC4R is a significant genetic factor for abdominal obesity. We first fit a linear model of the Waist to Hip Ratio (WHR) against the levels of the MC4R gene.
+
+```{r, eval=TRUE, echo=FALSE}
+L_MC4R=lm(WHR~MC4R); 
+kable(summary(L_MC4R)$coef, digits=4);
+```
+
+Next we consider fitting a enerlaized linear model with abdominal obesity as the response and the levels of the MC4R gene as the predictor.
+
+```{r,eval=TRUE,echo=FALSE}
+#summary(L_MC4R);
+GL_MC4R=glm(WHO_Ab_obese_indicator~MC4R); 
+kable(summary(GL_MC4R)$coef, digits=4);
+#summary(GL_MC4R);
+```
+
+We observe how the abdominal obesity varies against the genotypic levels of the DGAT gene namely CC, TC and TT.
+
+```{r,eval=TRUE,echo=FALSE}
+mean_WHR_CC=mean(WHR[which(DGAT=="CC")]);  
+mean_WHR_TC=mean(WHR[which(DGAT=="TC")]);
+mean_WHR_TT=mean(WHR[which(DGAT=="TT")]);
+sd_WHR_CC=sd(WHR[which(DGAT=="CC")]);  
+sd_WHR_TC=sd(WHR[which(DGAT=="TC")]);
+sd_WHR_TT=sd(WHR[which(DGAT=="TT")]);
+
+Table_DGAT=data.frame(rbind("TT",mean_WHR_TT,sd_WHR_TT),rbind("TC",mean_WHR_TC,sd_WHR_TC),rbind("CC",mean_WHR_CC,sd_WHR_CC)); colnames(Table_DGAT)=c("1","2","3");
+kable(t(Table_DGAT),digits=4,col.names=c("Levels","Mean BMI", "SD BMI"));
+```
+
+Next we present a linear model depicting the variation of the Waist to Hip Ratio (WHR) depending on the different levels of the DGAT gene
+```{r, eval=TRUE,echo=FALSE}
+L_DGAT=lm(WHR~DGAT); 
+kable(summary(L_DGAT)$coef, digits=4);
+```
+
+Also of interest is how the indicator of obesity changes with th different levels of the DGAT gene (A logistic linear model is fitted).
+```{r, eval=TRUE, echo=FALSE}
+#summary(L_DGAT);
+GL_DGAT=glm(WHO_Ab_obese_indicator~DGAT); 
+kable(summary(GL_DGAT)$coef, digits=4);
+#summary(GL_DGAT);
+```
+
+Now we present the logistic regression of the Obesity, Overweight data and the Abdominal Obesity data against the genetic factors DGAT gene, MC4R gene, Age and Gender and we see, how these different factors contribute to explaining the probability that a person is obese/ overweight/ abdominally obese. First we look at the abdominally obese individuals. 
+
+```{r, results='asis', echo=FALSE}
+
+Gmodel_Ab_obese=glm(as.factor(WHO_Ab_obese_indicator)~DGAT+MC4R+gender+Age,family=binomial(link="logit"));
+summ_Gmodel_Ab_obese=summary(Gmodel_Ab_obese);
+kable(summary(Gmodel_Ab_obese)$coef, digits=7);
+
+```
+
+The AIC for this model is given by 279.21. We consider now the overweight data (overweight implies BMI>25). We consider an indicator variable that is 1 if a person is overweight (BMI>25) and 0 otherwise.
+
+```{r, results='asis', echo=FALSE}
+WHO_obese_indicator=array(0,length(BMI));
+WHO_obese_indicator_India=array(0,length(BMI));
+
+
+WHO_obese_indicator[which(BMI>=30)]=1;
+
+WHO_obese_indicator_India[which(BMI>=25)]=1;
+
+Gmodel_obese_India=glm(as.factor(WHO_obese_indicator_India)~DGAT+MC4R+gender+Age,family=binomial(link="logit"));
+#summ_Gmodel_obese_India=summary(Gmodel_obese_India);
+kable(summary(Gmodel_obese_India)$coef, digits=7);
+
+
+```
+
+The AIC of the model is 346.66. We consider now the overweight data (obese implies BMI>30). We consider an indicator variable that is 1 if a person is overweight (BMI>30) and 0 otherwise.
+
+```{r, results='asis', echo=FALSE}
+Gmodel_obese=glm(as.factor(WHO_obese_indicator)~DGAT+MC4R+gender+Age,family=binomial(link="logit"));
+#summ_Gmodel_obese=summary(Gmodel_obese);
+kable(summary(Gmodel_obese)$coef, digits=7);
+
+
+```
+
+The AIC of the model is given by 305.81. Note from the above analysis that we did, it is very clear that the MC4R gene has a very substantial effect on both abdominal and regular obesity, nd even for overweight data. The DGAT gene is significant too for obesity, the TC genotype is significant for the abdominal obesity which is slightly strange, however TT and CC levels are not found to be significant for abdominal obesity. The DGAT gene fails to be significant fr the overweight data. Age is found to be a significant impacting factor for obesity but not for abdominal obesity and gender is found to be highly signifiant for abdominal obesity and only midly significant for the general obesity.
+
